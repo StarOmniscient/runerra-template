@@ -4,6 +4,9 @@
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { ReactNode } from "react";
+import { THEMES } from "./themes";
+
+
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -12,7 +15,7 @@ export function Providers({ children }: { children: ReactNode }) {
         attribute="class"
         defaultTheme="system"
         enableSystem
-        themes={['light', 'dark', 'midnight-blurple']} // ← list your themes
+        themes={THEMES.map(t => t.key)} // ← list your themes
       >
         {children}
       </ThemeProvider>

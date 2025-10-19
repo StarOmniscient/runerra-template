@@ -1,4 +1,3 @@
-// app/components/navbar/Sidebar.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -100,6 +99,7 @@ const navItems: NavbarConfig = [
   },
   {
     section: "Development",
+    role: "USER",
     items: [
       {
         label: "Projects",
@@ -166,7 +166,7 @@ const navItems: NavbarConfig = [
         children: [
           { label: "General", icon: <Cog className="h-4 w-4" />, href: "/settings/general" },
           { label: "Appearance", icon: <Palette className="h-4 w-4" />, href: "/settings/appearance" },
-          { label: "System", icon: <Wrench className="h-4 w-4" />, href: "/settings/system" },
+          { label: "System", icon: <Wrench className="h-4 w-4" />, href: "/settings/system", role: "USER" },
         ],
       },
       {
@@ -190,9 +190,9 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const { data: session, status } = useSession();
+  const userRole = session?.user?.role;
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({});
 
-  // Auto-expand parent if child route is active
   useEffect(() => {
     const newOpenState: Record<string, boolean> = {};
     navItems.forEach((section) => {
@@ -202,16 +202,13 @@ export default function Sidebar() {
           const isChildActive = item.children.some((child) =>
             pathname === child.href || pathname.startsWith(child.href + "/")
           );
-          if (isChildActive) {
-            newOpenState[uniqueKey] = true;
-          }
+          if (isChildActive) newOpenState[uniqueKey] = true;
         }
       });
     });
     setOpenSubmenus(newOpenState);
   }, [pathname]);
 
-  // Mobile detection
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -219,16 +216,11 @@ export default function Sidebar() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const toggleSubmenu = (key: string) => {
-    setOpenSubmenus((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
+  const toggleSubmenu = (key: string) =>
+    setOpenSubmenus((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full w-72 bg-background border-r border-border">
-      {/* Header */}
+    <div className="flex flex-col h-full w-72 border-r border-border bg-linear-to-b from-[var(--sidebar)] to-[var(--background)]">
       <Link href="/home">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-border">
           <svg
@@ -254,122 +246,133 @@ export default function Sidebar() {
         </div>
       </Link>
 
-      {/* Nav */}
-      <div className="flex-1 overflow-y-auto py-4">
-        {navItems.map((section, sectionIdx) => (
-          <div key={sectionIdx} className="mb-6 px-6">
-            <h3 className="text-xs font-semibold text-foreground/60 uppercase mb-3">
-              {section.section}
-            </h3>
-            <ul className="space-y-1">
-              {section.items.map((item, itemIdx) => {
-                const isActive = pathname === item.href;
-                const hasChildren = !!item.children;
-                const uniqueKey = `${section.section}-${item.label}`;
-                const isSubmenuOpen = openSubmenus[uniqueKey] || false;
+      {status === "authenticated" && userRole && (
+        <div className="flex-1 overflow-y-auto py-4">
+          {navItems.filter((item) => {
+            if (item.role) {
+              return userRole == item.role;
+            }
 
-                return (
-                  <li key={itemIdx}>
-                    <div className="relative">
-                      <Link
-                        href={item.href}
-                        scroll={false}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                          isActive
+            return true;
+          }).map((section, sectionIdx) => (
+            <div key={sectionIdx} className="mb-6 px-6">
+              <h3 className="text-xs font-semibold text-foreground/60 uppercase mb-3">
+                {section.section}
+              </h3>
+              <ul className="space-y-1">
+                {section.items?.filter((items) => {
+                  if (items.role) {
+                    return userRole == items.role;
+                  }
+
+                  return true;
+                }).map((item, itemIdx) => {
+                  const isActive = pathname === item.href;
+                  const hasChildren = !!item.children;
+                  const uniqueKey = `${section.section}-${item.label}`;
+                  const isSubmenuOpen = openSubmenus[uniqueKey] || false;
+
+                  return (
+                    <li key={itemIdx}>
+                      <div className="relative">
+                        <Link
+                          href={item.href}
+                          scroll={false}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive
                             ? "bg-primary/10 text-primary"
-                            : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                        }`}
-                        onClick={(e) => {
-                          if (hasChildren) {
-                            e.preventDefault();
-                            toggleSubmenu(uniqueKey);
-                          } else if (pathname === item.href) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <span
-                          className={`h-4 w-4 ${
-                            isActive ? "text-primary" : "text-foreground/60"
-                          }`}
+                            : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
+                            }`}
+                          onClick={(e) => {
+                            if (hasChildren) {
+                              e.preventDefault();
+                              toggleSubmenu(uniqueKey);
+                            } else if (pathname === item.href) e.preventDefault();
+                          }}
                         >
-                          {item.icon}
-                        </span>
-                        <span className="flex-1">{item.label}</span>
-                        {item.subtitle && (
-                          <span className="text-xs text-foreground/50 truncate max-w-[100px]">
-                            {item.subtitle}
+                          <span
+                            className={`h-4 w-4 ${isActive ? "text-primary" : "text-foreground/60"
+                              }`}
+                          >
+                            {item.icon}
                           </span>
-                        )}
-                        {item.badge && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                        {hasChildren ? (
-                          isSubmenuOpen ? (
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform duration-200 rotate-180 ${
-                                isActive ? "text-primary" : "text-foreground/60"
-                              }`}
-                            />
-                          ) : (
-                            <ArrowRight
-                              className={`h-4 w-4 transition-colors ${
-                                isActive ? "text-primary" : "text-foreground/60"
-                              }`}
-                            />
-                          )
-                        ) : null}
-                      </Link>
+                          <span className="flex-1">{item.label}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-foreground/50 truncate max-w-[100px]">
+                              {item.subtitle}
+                            </span>
+                          )}
+                          {item.badge && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                          {hasChildren &&
+                            (isSubmenuOpen ? (
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform duration-200 rotate-180 ${isActive ? "text-primary" : "text-foreground/60"
+                                  }`}
+                              />
+                            ) : (
+                              <ArrowRight
+                                className={`h-4 w-4 transition-colors ${isActive ? "text-primary" : "text-foreground/60"
+                                  }`}
+                              />
+                            ))}
+                        </Link>
 
-                      {/* Children */}
-                      {hasChildren && (
-                        <ul
-                          className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-200 ease-in-out ${
-                            isSubmenuOpen
+                        {hasChildren && (
+                          <ul
+                            className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-200 ease-in-out ${isSubmenuOpen
                               ? "max-h-96 opacity-100"
                               : "max-h-0 opacity-0 pointer-events-none"
-                          }`}
-                        >
-                          {item.children?.map((child, childIdx) => {
-                            const childIsActive = pathname === child.href;
-                            return (
-                              <li key={childIdx}>
-                                <Link
-                                  href={child.href}
-                                  scroll={false}
-                                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                                    childIsActive
-                                      ? "bg-primary/10 text-primary"
-                                      : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                                  }`}
-                                >
-                                  <span
-                                    className={`h-4 w-4 ${
-                                      childIsActive ? "text-primary" : "text-foreground/60"
-                                    }`}
-                                  >
-                                    {child.icon}
-                                  </span>
-                                  <span className="flex-1">{child.label}</span>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+                              }`}
+                          >
+                            {item.children
+                              ?.filter((child) => {
+                                if (child.role) {
+                                  return userRole == child.role;
+                                }
 
-      {/* Footer */}
-      {session && (
+                                return true;
+                              })
+                              .map((child, childIdx) => {
+                                const childIsActive = pathname === child.href;
+                                return (
+                                  <li key={childIdx}>
+                                    <Link
+                                      href={child.href}
+                                      scroll={false}
+                                      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${childIsActive
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
+                                        }`}
+                                    >
+                                      <span
+                                        className={`h-4 w-4 ${childIsActive
+                                          ? "text-primary"
+                                          : "text-foreground/60"
+                                          }`}
+                                      >
+                                        {child.icon}
+                                      </span>
+                                      <span className="flex-1">{child.label}</span>
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                          </ul>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === "authenticated" && (
         <div className="border-t border-border p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -390,9 +393,7 @@ export default function Sidebar() {
               variant="ghost"
               size="icon"
               className="text-foreground/60 hover:text-foreground"
-              onClick={async () => {
-                await signOut();
-              }}
+              onClick={async () => await signOut()}
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -402,22 +403,18 @@ export default function Sidebar() {
     </div>
   );
 
-  if (!isMobile) {
-    return <SidebarContent />;
-  }
+  if (!isMobile) return <SidebarContent />;
 
   return (
-    <>
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50">
-            ☰
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-72">
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
-    </>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50">
+          ☰
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="p-0 w-72">
+        <SidebarContent />
+      </SheetContent>
+    </Sheet>
   );
 }

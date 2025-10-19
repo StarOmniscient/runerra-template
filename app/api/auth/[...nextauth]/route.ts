@@ -42,6 +42,7 @@ export const authOptions = {
           name: user.username,
           email: user.email,
           image: user.avatarUrl,
+          role: user.role
         };
       },
     }),
@@ -61,6 +62,7 @@ export const authOptions = {
       token.id = user.id;
       token.name = user.name;
       token.image = user.image; // pass image to JWT
+      token.role = user.role
     }
     return token;
     },
@@ -69,6 +71,7 @@ export const authOptions = {
       session.user.id = token.id;
       session.user.name = token.name;
       session.user.image = token.image; // make image available in session
+      session.user.role = token.role
     }
     return session;
     },
