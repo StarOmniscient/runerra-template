@@ -386,7 +386,10 @@ export default function Sidebar() {
                 <div className="text-sm font-medium text-foreground">
                   {session.user.name}
                 </div>
-                <div className="text-xs text-foreground/60">{session.user.email}</div>
+                <div className="text-xs text-foreground/60">{session.user.email.length > 20
+                  ? session.user.email.slice(0, 20) + "..."
+                  : session.user.email}
+                </div>
               </div>
             </div>
             <Button

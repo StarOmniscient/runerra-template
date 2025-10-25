@@ -5,7 +5,7 @@ declare module "next-auth" {
     user: {
       id: string
       name?: string | null
-      email?: string | null
+      email: string
       image?: string | null
       role?: string | null
     }
